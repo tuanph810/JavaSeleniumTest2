@@ -6,6 +6,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import utils.BaseUnit;
 import utils.ExcelReader;
+import utils.ExcelWriter;
 import utils.PropertiesReader;
 
 import java.io.IOException;
@@ -13,8 +14,14 @@ import java.util.concurrent.TimeUnit;
 
 public class UserLogin extends BaseUnit {
 
+    /**
+     * Path to user login page selectors
+     */
     private static final String PROPERTIES_FILE = "UIMaps/UserLogin.properties";
 
+    /**
+     *
+     */
     private PropertiesReader pathReader = null;
     private PropertiesReader prosReader = null;
 
@@ -49,9 +56,7 @@ public class UserLogin extends BaseUnit {
         try {
             WebElement message = driver.findElement(By.cssSelector("div.flash-alert.mb-2 span"));
 
-            if (message != null) {
-                return message.getText();
-            }
+            if (message != null) return message.getText();
         } catch (Exception e) {
         }
 
@@ -66,9 +71,12 @@ public class UserLogin extends BaseUnit {
         String path = "src/main/resources/Data/accounts.xlsx";
 
         ExcelReader reader = new ExcelReader(path);
+        ExcelWriter writer = new ExcelWriter(new String[]{"No", "Username", "Password", "Status", "Log"});
 
         try {
             reader.open();
+
+            int i = 1;
 
             while (reader.hasNext()) {
                 Row row = reader.readRow();
@@ -78,16 +86,12 @@ public class UserLogin extends BaseUnit {
                 String username = row.getCell(0) != null ? row.getCell(0).toString() : "";
                 String password = row.getCell(1) != null ? row.getCell(1).toString() : "";
 
-                System.out.print("Start test: username: " + username + "\t\t\t" + "password: " + password);
-
                 handle(username, password);
 
                 if (pathReader.read("UserLoginPathPassed").equalsIgnoreCase(driver.getCurrentUrl())) {
-                    System.out.println("\t\tstatus: Success");
+                    writer.write(new String[]{String.valueOf(i++), username, password, "Success", "Login success"});
                 } else {
-
-
-                    System.out.println("\t\tstatus: " + this.getMessage());
+                    writer.write(new String[]{String.valueOf(i++), username, password, "Fail", this.getMessage()});
                 }
 
                 pathReader.close();
@@ -99,5 +103,7 @@ public class UserLogin extends BaseUnit {
 
             quit();
         }
+
+        System.out.println("File was saved: " + writer.save());
     }
 }

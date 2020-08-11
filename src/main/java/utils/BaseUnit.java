@@ -51,8 +51,6 @@ public class BaseUnit {
      */
     @AfterMethod
     public void quit() {
-        System.out.println("Quit!");
-
         driver.quit();
     }
 }
