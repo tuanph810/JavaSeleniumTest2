@@ -1,16 +1,13 @@
 package utils;
 
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
 import org.testng.annotations.AfterMethod;
 
 public class BaseUnit {
-    /**
-     *
-     */
-    private static final String DRIVER_FILE = "Configs/Driver.properties";
-    protected static final String PATH_FILE = "Configs/Path.properties";
-
     /**
      *
      */
@@ -18,7 +15,6 @@ public class BaseUnit {
 
     /**
      * Constructor
-     *
      */
     protected BaseUnit() {
 
@@ -28,13 +24,41 @@ public class BaseUnit {
      * Automatic called before each @Test
      *
      * Call manual without @BeforeMethod
+     *
+     * @param url
+     * @param driver
+     */
+    public void open(String url, Configure.DRIVERS driver) {
+        PropertiesReader reader = new PropertiesReader(Configure.getConfigPath(Configure.DRIVER_FILENAME));
+
+        switch (driver) {
+            case GECKODRIVER:
+                openGeckoDriver(url, reader);
+                break;
+            default:
+                openChromeDriver(url, reader);
+        }
+
+        reader.close();
+    }
+
+    /**
+     *
      */
     public void open(String url) {
-        PropertiesReader reader = new PropertiesReader(DRIVER_FILE);
+        this.open(url, Configure.DRIVERS.CHROMEDRIVER);
+    }
 
+    /**
+     * Open chrome driver
+     *
+     * @param url
+     * @param reader
+     */
+    private void openChromeDriver(String url, PropertiesReader reader) {
         String path = reader.read("chromedriver");
 
-        if(path != null) {
+        if (path != null) {
             System.setProperty("webdriver.chrome.driver", path);
 
             driver = new ChromeDriver();
@@ -42,8 +66,39 @@ public class BaseUnit {
         } else {
             System.out.println("Driver not found!");
         }
+    }
 
-        reader.close();
+    /**
+     * Open gecko driver (firefox)
+     *
+     * @param url
+     * @param reader
+     */
+    private void openGeckoDriver(String url, PropertiesReader reader) {
+        String path = reader.read("geckodriver");
+
+        if (path != null) {
+            System.setProperty("webdriver.gecko.driver", path);
+
+            driver = new FirefoxDriver();
+            driver.get(url);
+        } else {
+            System.out.println("Driver not found!");
+        }
+    }
+
+    /**
+     * @return
+     */
+    protected String getMessage(String selector) {
+        try {
+            WebElement message = driver.findElement(By.cssSelector(selector));
+
+            if (message != null) return message.getText();
+        } catch (Exception e) {
+        }
+
+        return "Fail without message";
     }
 
     /**

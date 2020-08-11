@@ -4,21 +4,12 @@ import org.apache.poi.ss.usermodel.Row;
 import org.junit.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
-import utils.BaseUnit;
-import utils.ExcelReader;
-import utils.ExcelWriter;
-import utils.PropertiesReader;
+import utils.*;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class UserLogin extends BaseUnit {
-
-    /**
-     * Path to user login page selectors
-     */
-    private static final String PROPERTIES_FILE = "UIMaps/UserLogin.properties";
-
     /**
      *
      */
@@ -29,38 +20,60 @@ public class UserLogin extends BaseUnit {
      *
      */
     public UserLogin() {
-        pathReader = new PropertiesReader(PATH_FILE);
-        prosReader = new PropertiesReader(PROPERTIES_FILE);
+        pathReader = new PropertiesReader(Configure.getConfigPath(Configure.PATH_FILENAME));
+        prosReader = new PropertiesReader(Configure.getMapPath(Configure.USER_LOGIN_MAP));
     }
 
     /**
      * @param username
      * @param password
      */
-    public void handle(String username, String password) {
+    private void handle(String username, String password) {
         try {
             driver.manage().timeouts().implicitlyWait(11, TimeUnit.SECONDS);
 
-            driver.findElement(By.cssSelector(prosReader.read("usernameField"))).sendKeys(username);
-            driver.findElement(By.cssSelector(prosReader.read("passwordField"))).sendKeys(password);
-            driver.findElement(By.cssSelector(prosReader.read("submitButton"))).click();
+            WebElement usernameEl = driver.findElement(By.cssSelector(prosReader.read("usernameField")));
+            WebElement passwordEl = driver.findElement(By.cssSelector(prosReader.read("passwordField")));
+            WebElement loginEl = driver.findElement(By.cssSelector(prosReader.read("submitButton")));
+
+            usernameEl.sendKeys(username);
+            passwordEl.sendKeys(password);
+
+            loginEl.click();
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
 
-    /**
-     * @return
-     */
-    public String getMessage() {
-        try {
-            WebElement message = driver.findElement(By.cssSelector("div.flash-alert.mb-2 span"));
+    private void executeTest(ExcelReader reader, ExcelWriter writer) {
+        int i = 1;
 
-            if (message != null) return message.getText();
-        } catch (Exception e) {
+        while (reader.hasNext()) {
+            Row row = reader.readRow();
+
+            open(pathReader.read("UserLoginPath"));
+
+            String username = reader.getCellData(row, 0);
+            String password = reader.getCellData(row, 1);
+
+            handle(username, password);
+
+            if (pathReader.read("UserLoginPathPassed").equalsIgnoreCase(driver.getCurrentUrl())) {
+                writer.write(new String[]{String.valueOf(i++), username, password, "Success", "Login success"});
+            } else {
+                writer.write(new String[]{
+                        String.valueOf(i++),
+                        username,
+                        password,
+                        "Fail",
+                        this.getMessage("div.flash-alert.mb-2 span")
+                });
+            }
+
+            pathReader.close();
+
+            quit();
         }
-
-        return "Fail without message";
     }
 
     /**
@@ -68,7 +81,7 @@ public class UserLogin extends BaseUnit {
      */
     @Test
     public void testLogin() {
-        String path = "src/main/resources/Data/accounts.xlsx";
+        String path = Configure.getDataPath("accounts.xlsx");
 
         ExcelReader reader = new ExcelReader(path);
         ExcelWriter writer = new ExcelWriter(new String[]{"No", "Username", "Password", "Status", "Log"});
@@ -76,28 +89,7 @@ public class UserLogin extends BaseUnit {
         try {
             reader.open();
 
-            int i = 1;
-
-            while (reader.hasNext()) {
-                Row row = reader.readRow();
-
-                open(pathReader.read("UserLoginPath"));
-
-                String username = row.getCell(0) != null ? row.getCell(0).toString() : "";
-                String password = row.getCell(1) != null ? row.getCell(1).toString() : "";
-
-                handle(username, password);
-
-                if (pathReader.read("UserLoginPathPassed").equalsIgnoreCase(driver.getCurrentUrl())) {
-                    writer.write(new String[]{String.valueOf(i++), username, password, "Success", "Login success"});
-                } else {
-                    writer.write(new String[]{String.valueOf(i++), username, password, "Fail", this.getMessage()});
-                }
-
-                pathReader.close();
-
-                quit();
-            }
+            executeTest(reader, writer);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
 

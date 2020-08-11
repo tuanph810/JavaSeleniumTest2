@@ -67,4 +67,13 @@ public class ExcelReader {
     public boolean hasNext() {
         return rowIterator.hasNext();
     }
+
+    /**
+     * @param row
+     * @param index
+     * @return
+     */
+    public String getCellData(Row row, int index) {
+        return row.getCell(index) != null ? row.getCell(index).toString() : "";
+    }
 }
